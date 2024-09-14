@@ -23,7 +23,7 @@ app.get("/", (req, res) => {
   res.send("Servidor levantado");
 });
 console.log("Fecha de hoy (Argentina): ", argTime.format("YYYY-MM-DD"))
-cron.schedule("12 20 * * *", async () => {
+cron.schedule("14 20 * * *", async () => {
   console.log("Ejecutando tarea CRON para los vencimientos");
   try {
     const hoy = argTime.format("YYYY-MM-DD");
