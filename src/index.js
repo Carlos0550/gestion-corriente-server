@@ -23,7 +23,7 @@ app.get("/", (req, res) => {
   res.send("Servidor levantado");
 });
 console.log("Fecha de hoy (Argentina): ", argTime.format("YYYY-MM-DD"))
-cron.schedule("0 0 * * *", async () => {
+cron.schedule("09 20 * * *", async () => {
   console.log("Ejecutando tarea CRON para los vencimientos");
   try {
     const hoy = argTime.format("YYYY-MM-DD");
@@ -37,7 +37,7 @@ cron.schedule("0 0 * * *", async () => {
         `Deudas actualizadas exitosamente, ${response.rowCount} filas fueron afectadas`
       );
     } else {
-      console.log("Hubo un problema y no se pudo concretar la tarea CRON");
+      console.log("No hay deudas para actualizar en este momento.");
     }
   } catch (error) {
     await clientSupabase.query("ROLLBACK");
