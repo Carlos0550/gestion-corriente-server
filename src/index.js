@@ -1,11 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 const dayjs = require("dayjs");
-require("dayjs/locale/es.js");
+const utc = require("dayjs/plugin/utc.js")
+const timezone = require("dayjs/plugin/timezone.js")
 require("dotenv").config();
 const cron = require("node-cron");
 const clientSupabase = require("./bd/clientSupabase.js");
-
 const app = express();
 app.use(
   cors({
@@ -15,18 +15,22 @@ app.use(
   })
 );
 app.use(express.json());
+dayjs.extend(utc)
+dayjs.extend(timezone)
+const argTime = dayjs().tz("America/Argentina/Buenos_Aires")
 
 app.get("/", (req, res) => {
   res.send("Servidor levantado");
 });
-
-cron.schedule("11 09 * * *", async () => {
+console.log("Fecha de hoy (Argentina): ", argTime.format("YYYY-MM-DD"))
+cron.schedule("0 0 * * *", async () => {
   console.log("Ejecutando tarea CRON para los vencimientos");
   try {
-    const hoy = dayjs().format("YYYY-MM-DD");
+    const hoy = argTime.format("YYYY-MM-DD");
     const query = "UPDATE debts SET estado = 'vencido' WHERE duedate <= $1";
     await clientSupabase.query("BEGIN");
     const response = await clientSupabase.query(query, [hoy]);
+    console.log(response)
     if (response.rowCount > 0) {
       await clientSupabase.query("COMMIT");
       console.log(
@@ -221,7 +225,7 @@ app.post("/make-deliver", async (req, res) => {
 
 app.post("/cancel-debts", async (req, res) => {
   const { clientID, clientName, deudas, entregas } = req.body[0];
-  const today = dayjs().format("YYYY-MM-DD");
+  const today = argTime.format("YYYY-MM-DD");
   // console.log(req.body[0])
   const query1 =
     'INSERT INTO "userHistory"("nombre_completo", "fecha_cancelacion", "detalle_deudas", "detalle_entregas", "userId") VALUES($1,$2,$3,$4,$5)';
@@ -385,6 +389,8 @@ app.delete("/delete-deliver", async (req, res) => {
     return res.status(500).json({ message: "Error interno del servidor: No se pudo eliminar la Entrega" });
   }
 });
+
+
 
 
 app.listen(process.env.PORT || 4000, () => {
