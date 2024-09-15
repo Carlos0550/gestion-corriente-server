@@ -57,13 +57,24 @@ app.put("/get-expirations", async (req, res) => {
     const response = await clientSupabase.query(query, [hoy]);
     if (response.rowCount > 0) {
       await clientSupabase.query("COMMIT");
-      return res.status(200).json({response})
+      return res.status(200).json({ response });
     } else {
-      return res.status(406).json({message: "No hay deudas para actualizar en este momento.", response})
+      return res
+        .status(406)
+        .json({
+          message: "No hay deudas para actualizar en este momento.",
+          response,
+        });
     }
   } catch (error) {
     await clientSupabase.query("ROLLBACK");
-    return res.status(500).json({message: "Error interno del servidor, no se pudieron actualizar los vencimientos", error})
+    return res
+      .status(500)
+      .json({
+        message:
+          "Error interno del servidor, no se pudieron actualizar los vencimientos",
+        error,
+      });
   }
 });
 
@@ -288,13 +299,11 @@ app.get("/get-history", async (req, res) => {
           .json({ message: "No se encontraron registros de este cliente" });
       }
     } catch (error) {
-      return res
-        .status(500)
-        .json({
-          message:
-            "Error interno del servidor: No se pudo traer el historial del cliente",
-          error,
-        });
+      return res.status(500).json({
+        message:
+          "Error interno del servidor: No se pudo traer el historial del cliente",
+        error,
+      });
     }
   } else {
     return res.status(400).json({ message: "El ID del cliente es requerido" });
@@ -313,12 +322,10 @@ app.get("/get-view-vencimientos", async (req, res) => {
         .json({ message: "No hay vencimientos para mostrar" });
     }
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        message:
-          "Error del servidor: No se pudieron traer los vencimientos, recargue la página para intentarlo nuevamente",
-      });
+    return res.status(500).json({
+      message:
+        "Error del servidor: No se pudieron traer los vencimientos, recargue la página para intentarlo nuevamente",
+    });
   }
 });
 
@@ -336,20 +343,16 @@ app.post("/create-clients", async (req, res) => {
       nombre_completo.toLowerCase(),
     ]);
     if (nombreExiste.rows[0].existe > 0) {
-      return res
-        .status(400)
-        .json({
-          message: "El nombre completo ya existe, por favor intente con otro.",
-        });
+      return res.status(400).json({
+        message: "El nombre completo ya existe, por favor intente con otro.",
+      });
     }
 
     const dniExiste = await clientSupabase.query(query2, [dni]);
     if (dniExiste.rows[0].existe > 0) {
-      return res
-        .status(400)
-        .json({
-          message: "El DNI ya está registrado, por favor intente con otro.",
-        });
+      return res.status(400).json({
+        message: "El DNI ya está registrado, por favor intente con otro.",
+      });
     }
 
     const response = await clientSupabase.query(query3, [
@@ -362,20 +365,16 @@ app.post("/create-clients", async (req, res) => {
     if (response.rowCount > 0) {
       return res.status(200).send();
     } else {
-      return res
-        .status(400)
-        .json({
-          message: "No se pudo crear el cliente, por favor intente nuevamente.",
-        });
+      return res.status(400).json({
+        message: "No se pudo crear el cliente, por favor intente nuevamente.",
+      });
     }
   } catch (error) {
     console.error("Error en la creación del cliente:", error);
-    return res
-      .status(500)
-      .json({
-        message:
-          "Error interno del servidor: No se pudo crear el cliente, por favor intente nuevamente.",
-      });
+    return res.status(500).json({
+      message:
+        "Error interno del servidor: No se pudo crear el cliente, por favor intente nuevamente.",
+    });
   }
 });
 
@@ -400,11 +399,9 @@ app.delete("/delete-product", async (req, res) => {
   } catch (error) {
     await clientSupabase.query("ROLLBACK");
     console.error("Error al eliminar el producto:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Error interno del servidor: No se pudo eliminar el producto",
-      });
+    return res.status(500).json({
+      message: "Error interno del servidor: No se pudo eliminar el producto",
+    });
   }
 });
 
@@ -430,13 +427,96 @@ app.delete("/delete-deliver", async (req, res) => {
   } catch (error) {
     await clientSupabase.query("ROLLBACK");
     console.error("Error al eliminar la Entrega:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Error interno del servidor: No se pudo eliminar la Entrega",
-      });
+    return res.status(500).json({
+      message: "Error interno del servidor: No se pudo eliminar la Entrega",
+    });
   }
 });
+
+app.put("/edit-client", async (req, res) => {
+  const { nombre_completo, apodo, dni, telefono, direccion, id, uuid } =
+    req.body;
+    console.log(nombre_completo)
+  const query1 = `
+  UPDATE "users"
+  SET "nombre_completo" = $1,
+      "dni" = $2,
+      "telefono" = $3,
+      "direccion" = $4,
+      "apodo" = $5
+  WHERE "uuid" = $6
+`;
+
+  const query2 = `
+  UPDATE "userHistory"
+  SET "nombre_completo" = $1
+  WHERE "userId" = $2
+`;
+
+  const query3 = `
+  UPDATE "registerDelierys"
+  SET "nombre_cliente" = $1
+  WHERE "uuid_cliente" = $2
+`;
+
+  const query4 = `
+  UPDATE "debts"
+  SET "nombre_cliente" = $1
+  WHERE "uuid" = $2
+`;
+try {
+  await clientSupabase.query("BEGIN")
+  const response1 = await clientSupabase.query(query1, [nombre_completo, dni, telefono || "",direccion || "",apodo || "", uuid])
+  const response2 = await clientSupabase.query(query2, [nombre_completo, uuid])
+  const response3 = await clientSupabase.query(query3, [nombre_completo, uuid]);
+  const response4 = await clientSupabase.query(query4, [nombre_completo, uuid])
+  if (response1.rowCount > 0 || response2.rowCount > 0 || response3.rowCount > 0 || response4.rowCount > 0) {
+    await clientSupabase.query("COMMIT")
+    return res.status(200).json({message: "Datos del cliente editados!"})
+  }else{
+    return res.status(400).json({message: "Error, no se pudieron editar los datos del cliente", response1, response2, response3, response4})
+  }
+} catch (error) {
+  console.log(error)
+  await clientSupabase.query("ROLLBACK")
+  return res.status(500).json({message: "Error en el servidor: no se pudieron editar los datos del cliente", error})
+}
+});
+
+app.delete("/delete-client", async (req, res) => {
+  const uuid = req.query.uuid;
+
+  if (!uuid) {
+    return res.status(400).json({ message: "UUID es requerido" });
+  }
+
+  const query1 = `DELETE FROM "users" WHERE "uuid" = $1`;
+  const query2 = `DELETE FROM "userHistory" WHERE "userId" = $1`;
+  const query3 = `DELETE FROM "registerDelierys" WHERE "uuid_cliente" = $1`;
+  const query4 = `DELETE FROM "debts" WHERE "uuid" = $1`;
+
+  try {
+    await clientSupabase.query("BEGIN");
+
+    const response1 = await clientSupabase.query(query1, [uuid]);
+    const response2 = await clientSupabase.query(query2, [uuid]);
+    const response3 = await clientSupabase.query(query3, [uuid]);
+    const response4 = await clientSupabase.query(query4, [uuid]);
+
+    if (response1.rowCount > 0 || response2.rowCount > 0 || response3.rowCount > 0 || response4.rowCount > 0) {
+      await clientSupabase.query("COMMIT");
+      return res.status(200).json({ message: "Cliente y registros asociados eliminados exitosamente" });
+    } else {
+      await clientSupabase.query("ROLLBACK");
+      return res.status(404).json({ message: "No se encontraron registros para eliminar" });
+    }
+  } catch (error) {
+    await clientSupabase.query("ROLLBACK");
+    console.error("Error al eliminar los datos del cliente:", error);
+    return res.status(500).json({ message: "Error en el servidor: no se pudieron eliminar los datos del cliente" });
+  }
+});
+
 
 app.listen(process.env.PORT || 4000, () => {
   console.log("Servidor levantado en el puerto 4000");
