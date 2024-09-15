@@ -55,21 +55,15 @@ app.put("/get-expirations", async (req, res) => {
     const query = "UPDATE debts SET estado = 'vencido' WHERE duedate <= $1";
     await clientSupabase.query("BEGIN");
     const response = await clientSupabase.query(query, [hoy]);
-    console.log(response);
     if (response.rowCount > 0) {
       await clientSupabase.query("COMMIT");
-      console.log(
-        `Deudas actualizadas exitosamente, ${response.rowCount} filas fueron afectadas`
-      );
+      return res.status(200).json({response})
     } else {
-      console.log("No hay deudas para actualizar en este momento.");
+      return res.status(406).json({message: "No hay deudas para actualizar en este momento.", response})
     }
   } catch (error) {
     await clientSupabase.query("ROLLBACK");
-    console.error(
-      "Hubo un problema y no se pudo concretar la tarea CRON:",
-      error
-    );
+    return res.status(500).json({message: "Error interno del servidor, no se pudieron actualizar los vencimientos", error})
   }
 });
 
